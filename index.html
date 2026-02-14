@@ -1,0 +1,161 @@
+
+
+  <!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Tic Tac Toe — Web</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto;margin:40px;display:flex;flex-direction:column;align-items:center}
+    #board{display:grid;grid-template-columns:repeat(3,100px);gap:5px}
+    .cell{width:100px;height:100px;display:flex;align-items:center;justify-content:center;font-size:48px;background:#f0f0f0;cursor:pointer;user-select:none}
+    .cell.disabled{cursor:default;opacity:.6}
+    #controls{margin-top:16px}
+    button{padding:8px 12px;margin-right:8px}
+  </style>
+</head>
+<body>
+  <h2>Tic‑Tac‑Toe — X is you, O is AI</h2>
+  <div class="panel" style="padding:12px;border-radius:10px;">
+    <div id="board" role="grid" aria-label="Tic Tac Toe board"></div>
+    <div id="status" aria-live="polite" style="margin-top:12px"></div>
+    <div id="controls" style="margin-top:8px;">
+      <button id="new">New Game</button>
+      <label style="margin-right:10px"><input type="checkbox" id="aiFirst"> AI goes first</label>
+      <label style="margin-right:8px">Background: <input type="file" id="bgUpload" accept="image/*"></label>
+      <button id="useSample">Use sample grassy</button>
+      <button id="resetBg">Reset background</button>
+    </div>
+  </div>
+
+  <script>
+    const HUMAN='X', AI='O', EMPTY='';
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const newBtn = document.getElementById('new');
+    const aiFirstChk = document.getElementById('aiFirst');
+    let board = Array(9).fill(EMPTY);
+    let current = HUMAN;
+    const WIN_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+    function render(){
+      boardEl.innerHTML = '';
+      const gameWinner = winner(board);
+      board.forEach((v,i)=>{
+        const c = document.createElement('div');
+        const disabled = Boolean(v) || Boolean(gameWinner);
+        c.className = 'cell' + (disabled ? ' disabled' : '');
+        c.setAttribute('role','button');
+        c.setAttribute('data-index', String(i));
+        c.tabIndex = disabled ? -1 : 0;
+        c.textContent = v;
+        c.onclick = ()=>{ if(!board[i] && !gameWinner && current===HUMAN){ board[i]=HUMAN; current=AI; step(); } };
+        c.onkeydown = (e)=>{ if((e.key==='Enter' || e.key===' ') && !board[i] && !gameWinner && current===HUMAN){ board[i]=HUMAN; current=AI; step(); } };
+        boardEl.appendChild(c);
+      });
+      const w = gameWinner;
+      statusEl.textContent = w ? (w==='Draw' ? "It's a draw." : `${w} wins!`) : (current===HUMAN ? "Your move." : "AI thinking...");
+    }
+
+    function availableMoves(b){ return b.map((v,i)=>v?null:i).filter(x=>x!==null); }
+
+    function winner(b){
+      for(const [a,c,d] of WIN_LINES) if(b[a] && b[a]===b[c] && b[c]===b[d]) return b[a];
+      return b.includes(EMPTY) ? null : 'Draw';
+    }
+
+    function minimax(b, player){
+      const w = winner(b);
+      if(w===AI) return {score:1};
+      if(w===HUMAN) return {score:-1};
+      if(w==='Draw') return {score:0};
+
+      const moves = availableMoves(b);
+      if(player===AI){
+        let best = {score:-Infinity, move:null};
+        for(const m of moves){
+          b[m]=AI;
+          const res = minimax(b, HUMAN);
+          b[m]=EMPTY;
+          if(res.score>best.score) { best = {score:res.score, move:m}; if(best.score===1) break; }
+        }
+        return best;
+      }else{
+        let best = {score:Infinity, move:null};
+        for(const m of moves){
+          b[m]=HUMAN;
+          const res = minimax(b, AI);
+          b[m]=EMPTY;
+          if(res.score<best.score) { best = {score:res.score, move:m}; if(best.score===-1) break; }
+        }
+        return best;
+      }
+    }
+
+    function aiMove(){
+      const res = minimax(board.slice(), AI);
+      if(res.move==null){
+        const moves = availableMoves(board);
+        return moves[Math.floor(Math.random()*moves.length)];
+      }
+      return res.move;
+    }
+
+    function step(){
+      render();
+      const w = winner(board);
+      if(w) return;
+      if(current===AI){
+        setTimeout(()=>{
+          const m = aiMove();
+          if(typeof m === 'number') board[m]=AI;
+          current=HUMAN;
+          render();
+        }, 200);
+      }
+    }
+
+    // Background controls: upload an image or use a sample grassy image
+    const bgUpload = document.getElementById('bgUpload');
+    const useSampleBtn = document.getElementById('useSample');
+    const resetBgBtn = document.getElementById('resetBg');
+
+    bgUpload.onchange = (e) => {
+      const f = e.target.files && e.target.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.body.style.backgroundImage = `url(${reader.result})`;
+        document.body.style.backgroundSize = 'cover';
+        document.body.style.backgroundPosition = 'center';
+        document.body.style.backgroundRepeat = 'no-repeat';
+      };
+      reader.readAsDataURL(f);
+    };
+
+    useSampleBtn.onclick = () => {
+      // sample grassy image (royalty-free from Unsplash)
+      const url = 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1600&q=80';
+      document.body.style.backgroundImage = `url(${url})`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundRepeat = 'no-repeat';
+    };
+
+    resetBgBtn.onclick = () => {
+      document.body.style.backgroundImage = '';
+    };
+
+    newBtn.onclick = ()=>{
+      board = Array(9).fill(EMPTY);
+      current = aiFirstChk.checked ? AI : HUMAN;
+      render();
+      if(current===AI) step();
+    };
+
+    // init
+    newBtn.click();
+  </script>
+</body>
+</html>
