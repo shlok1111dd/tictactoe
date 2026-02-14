@@ -1,0 +1,11 @@
+{
+  "name": "tic-tac-toe-web",
+  "version": "1.0.0",
+  "description": "Simple Tic-Tac-Toe with minimax AI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "MIT"
+}
